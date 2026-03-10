@@ -1,0 +1,41 @@
+// Simplified GBA Serial Communication (SPI)
+#include <Arduino.h>
+
+const int SI_PIN = 12;  // Serial In
+const int SO_PIN = 11;  // Serial Out
+const int SCK_PIN = 10; // Serial Clock (Timing)
+
+void setup() {
+  pinMode(SI_PIN, INPUT);
+  pinMode(SO_PIN, OUTPUT);
+  pinMode(SCK_PIN, INPUT); // GBA usually acts as the "Master" clock
+  Serial.begin(115200);
+}
+
+// This function "listens" for one 16-bit packet from FireRed
+uint16_t readGBAData() {
+  uint16_t receivedData = 0;
+
+  // Wait for the GBA to pull the clock pin LOW to start
+  while(digitalRead(SCK_PIN) == HIGH); 
+
+  for (int i = 0; i < 16; i++) {
+    // Wait for the clock pulse
+    while(digitalRead(SCK_PIN) == LOW);
+    
+    // Read the bit from the GBA's Serial Out pin
+    if (digitalRead(SI_PIN) == HIGH) {
+      receivedData |= (1 << (15 - i));
+    }
+    
+    while(digitalRead(SCK_PIN) == HIGH);
+  }
+  return receivedData;
+}
+
+void loop() {
+  uint16_t packet = readGBAData();
+  // Translate the raw hex into something a Switch/PC understands
+  Serial.print("GBA Sent: ");
+  Serial.println(packet, HEX); 
+}
